@@ -17,16 +17,20 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.*;
 import java.util.*;
+import java.awt.Desktop;
 
 public class JSONChecker {
-    private static final String INPUT_DIR = "testcases/in/";
-    private static final String OUTPUT_DIR = "testcases/out/";
-    private static final String YOURS_DIR = "testcases/yours/";
+    // Edit Settings Here
+    private static final boolean DEBUG_MODE = false;
 
+    // Testcase DIR
+    private static final String TESTCASE_DIR = "testcases/";
+    private static final String INPUT_DIR = TESTCASE_DIR + "in/";
+    private static final String OUTPUT_DIR = TESTCASE_DIR + "out/";
+    private static final String YOURS_DIR = TESTCASE_DIR + "yours/";
 
     private String url;
     private String token;
-
 
     public JSONChecker(String url) {
         this.url = url;
@@ -34,33 +38,27 @@ public class JSONChecker {
     }
 
     public static void writeOutput(String file, String response) {
-        try {
-            PrintWriter out = new PrintWriter(new FileOutputStream((YOURS_DIR + file)));
-
-
+        try (PrintWriter out = new PrintWriter(new FileOutputStream((YOURS_DIR + file)))) {
             out.println(response);
-            out.close();
-        } catch (Throwable e) {
+        } catch (Throwable e){
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
+        if(DEBUG_MODE){
+            // Debug messages of HttpClient; only runs when debug mode is on
+            System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.SimpleLog");
+            System.setProperty("org.apache.commons.logging.simplelog.showdatetime", "true");
+            System.setProperty("org.apache.commons.logging.simplelog.log.httpclient.wire", "debug");
+            System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
+        }
 
-        // uncomment this if you want to see the debug messages of HttpClient
-        /*
-        System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.SimpleLog");
-        System.setProperty("org.apache.commons.logging.simplelog.showdatetime", "true");
-        System.setProperty("org.apache.commons.logging.simplelog.log.httpclient.wire", "debug");
-        System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http", "debug");
-        */
-
-        String url = "http://app-2014is203g8t8.rhcloud.com/json";
-
+        String url = "http://54.201.70.38/app/json";
 
         if (args.length != 1) {
             System.out.println("java JSONChecker <URL>");
-            System.out.println("e.g. java JSONChecker http://app-2014is203g8t8.rhcloud.com/json/");
+            System.out.println("e.g. java JSONChecker " + "http://<host>/app/json");
             return;
         } else {
             url = args[0];
@@ -75,8 +73,8 @@ public class JSONChecker {
         // delete the files in the yours directory
         checker.deleteFilesInYoursDirectory();
 
-        File f = new File("testcases/in");
-
+        // Gets files from input directory
+        File f = new File(INPUT_DIR);
         File[] directories = f.listFiles(new FileFilter() {
             @Override
             public boolean accept(File dir) {
@@ -90,6 +88,10 @@ public class JSONChecker {
 
         int total = 0;
         int numPassed = 0;
+
+        ArrayList<String> outputResults = new ArrayList<> ();
+        outputResults.add("Test Cases Failed:");
+
         for (int i = 0; i < directories.length; i++) {
             String name = directories[i].getName();
 
@@ -98,6 +100,8 @@ public class JSONChecker {
 
             int testCaseNum = Integer.parseInt(name.substring(0, posOfDash));
             int posOfDot = name.indexOf(".");
+            String testCaseName = name.substring(posOfDash + 1,posOfDot);
+            String testStatus = "passed";
 
             if (directories[i].getName().endsWith(".zip")) {
                 String call = name.substring(posOfDash + 1, posOfDot);
@@ -105,9 +109,10 @@ public class JSONChecker {
 
                 if (checker.bootstrap(directories[i].getName(), call, filenameWithoutExt)) {
                     numPassed++;
-                    System.out.println("Test Case " + testCaseNum + " passed");
+                    testStatus = "passed";
                 } else {
-                    System.out.println("Test Case " + testCaseNum + " failed");
+                    testStatus = "failed";
+                    outputResults.add(String.format("%03d",testCaseNum) + ": " + testCaseName);
                 }
             } else {
                 String call = name.substring(posOfDash + 1, posOfDot);
@@ -120,16 +125,33 @@ public class JSONChecker {
                 }
                 if (testResult) {
                     numPassed++;
-                    System.out.println("Test Case " + testCaseNum + " passed");
+                    testStatus = "passed";
                 } else {
-                    System.out.println("Test Case " + testCaseNum + " failed");
+                    testStatus = "failed";
+                    outputResults.add(String.format("%03d",testCaseNum) + ": " + testCaseName);
                 }
             }
 
+            System.out.println("Test Case " + testCaseNum + " " + testStatus + ": " + testCaseName);
             total++;
         }
-        System.out.println("Total: " + numPassed + "/" + total);
+        String resultMsg = "Total: " + numPassed + "/" + total;
 
+        // Display summary then failed test cases
+        String outputString = resultMsg + "\r\n\r\n";
+        for(String s : outputResults){
+            outputString += s + "\r\n";
+        }
+        writeOutput("result.txt", outputString);
+
+        System.out.println(resultMsg);
+
+        File resultFile = new File(YOURS_DIR + "result.txt");
+        try{
+            Desktop.getDesktop().open(resultFile);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public boolean assertAuthenticateEquals(String studentAns, String correctAns) {
@@ -365,7 +387,7 @@ public class JSONChecker {
     }
 
     public void deleteFilesInYoursDirectory() {
-        File dir = new File("testcases/yours");
+        File dir = new File(YOURS_DIR);
         File[] subdirs = dir.listFiles();
 
         for (File f : subdirs) {
