@@ -18,6 +18,8 @@ import org.apache.http.util.EntityUtils;
 import java.io.*;
 import java.util.*;
 import java.awt.Desktop;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 public class JSONChecker {
     // Edit Settings Here
@@ -38,6 +40,12 @@ public class JSONChecker {
     }
 
     public static void writeOutput(String file, String response) {
+        File f = new File(YOURS_DIR);
+
+        if(!f.exists()){
+            f.mkdir();
+        }
+
         try (PrintWriter out = new PrintWriter(new FileOutputStream((YOURS_DIR + file)))) {
             out.println(response);
         } catch (Throwable e){
@@ -68,6 +76,8 @@ public class JSONChecker {
             url += "/";
         }
 
+        String urlOutput = url;
+
         JSONChecker checker = new JSONChecker(url);
 
         // delete the files in the yours directory
@@ -90,7 +100,6 @@ public class JSONChecker {
         int numPassed = 0;
 
         ArrayList<String> outputResults = new ArrayList<> ();
-        outputResults.add("Test Cases Failed:");
 
         for (int i = 0; i < directories.length; i++) {
             String name = directories[i].getName();
@@ -135,13 +144,26 @@ public class JSONChecker {
             System.out.println("Test Case " + testCaseNum + " " + testStatus + ": " + testCaseName);
             total++;
         }
-        String resultMsg = "Total: " + numPassed + "/" + total;
+        int percentage = (int) (((double) numPassed / total) * 100);
+        String resultMsg = "Total: " + numPassed + "/" + total + " (" + percentage + "%)";
 
         // Display summary then failed test cases
-        String outputString = resultMsg + "\r\n\r\n";
-        for(String s : outputResults){
-            outputString += s + "\r\n";
+        Calendar c = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy HH:mm:ss Z");
+
+        String outputString = "Testing " + urlOutput + "\r\n";
+        outputString += "Testing Finished: " + sdf.format(c.getTime()) + "\r\n";
+        outputString += resultMsg + "\r\n";
+        
+        if(!outputResults.isEmpty()){
+            outputString += "\r\nTest Cases Failed:";
+            for(String s : outputResults){
+                outputString += "\r\n" + s;
+            }
+        } else{
+            outputString += "\r\nAll test cases passed!";
         }
+        
         writeOutput("result.txt", outputString);
 
         System.out.println(resultMsg);
