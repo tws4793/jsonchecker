@@ -1,0 +1,14 @@
+{
+  "status": "success",
+  "num-record-loaded": [
+    {
+      "app-lookup.csv": 9
+    },
+    {
+      "app.csv": 793
+    },
+    {
+      "demographics.csv": 1599
+    }
+  ]
+}
