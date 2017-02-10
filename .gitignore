@@ -1,1 +1,4 @@
-/testcases/yours/*
+result.txt 
+/testcases/* 
+/lib/JSONChecker.jar 
+*.class
